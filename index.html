@@ -43,8 +43,7 @@
         }
 
         .game-title {
-            font-size: clamp(1.5rem, 4vw, 2.5rem);
-            margin-bottom: clamp(5px, 1vh, 10px);
+            font-size: clamp(0.8rem, 2.8vw, 1.8rem);
             text-shadow: 2px 2px 3px black;
         }
 
@@ -115,7 +114,7 @@
 
     <div class="game-header">
         <h1 class="game-title" style="text-align: center;">🔍 A </br> Gizli Nesneleri Bul</h1>
-        <div class="game-stats" style="text-align: center; font-size: 22px;">
+        <div class="game-stats" style="text-align: center; font-size: 18px;">
             <div>Bulunan: <span id="found-count">0</span>/<span id="total-count">9</span></div>
             <div>Kalan süre: <span id="timer" class="timer-display">1:00</span></div>
             <div>Skor: <span id="score">0</span></div>
@@ -337,6 +336,7 @@
 
             document.getElementById('loader').style.display = 'none';
             document.querySelector('.game-header').style.visibility = 'visible';
+            // document.querySelector('.game-header').style.maxHeight = '15%';
             document.querySelector('.game-area').style.visibility = 'visible';
 
             game = new ResponsiveHiddenImagesGame();
