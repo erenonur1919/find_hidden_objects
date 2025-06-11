@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gizli Objeleri Bul</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #F2EBE3;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: green;
+            overflow: hidden;
+        }
+
+        .game-header,
+        .game-area {
+            visibility: hidden;
+        }
+
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1e3c72;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            z-index: 9999;
+        }
+
+        .game-title {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            margin-bottom: clamp(5px, 1vh, 10px);
+            text-shadow: 2px 2px 3px black;
+        }
+
+        .game-area {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
+            overflow: hidden;
+            min-height: 400px;
+            max-height: calc(100vh - 20px);
+        }
+
+        .scene-background {
+            width: 100%;
+            height: 100%;
+            background: url('images/background.jpeg') no-repeat center center;
+            background-size: 100% 100%;
+            position: relative;
+        }
+
+        .hidden-object {
+            position: absolute;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hidden-object.found {
+            background: rgba(0, 255, 0, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
+            animation: foundPulse 1s ease-in-out;
+            pointer-events: none;
+        }
+
+        .object-icon {
+            width: 80%;
+            height: 80%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        .completion-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: clamp(20px, 4vw, 30px);
+            border-radius: 15px;
+            text-align: center;
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            display: none;
+            backdrop-filter: blur(10px);
+            max-width: 90vw;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="loader">Oyun yükleniyor...</div>
+
+    <div class="game-header">
+        <h1 class="game-title" style="text-align: center;">🔍 A </br> Gizli Nesneleri Bul</h1>
+        <div class="game-stats" style="text-align: center; font-size: 22px;">
+            <div>Bulunan: <span id="found-count">0</span>/<span id="total-count">9</span></div>
+            <div>Kalan süre: <span id="timer" class="timer-display">1:00</span></div>
+            <div>Skor: <span id="score">0</span></div>
+        </div>
+    </div>
+
+    <div class="game-area" id="game-area">
+        <div class="scene-background" id="scene-background"></div>
+        <button class="hint-btn" id="hint-btn" onclick="showHint()">💡 Hint</button>
+
+        <div class="completion-message" id="completion-message">
+            <h2 id="completion-title">🎉 Tebrikler!</h2>
+            <p id="completion-text">Tüm gizli nesneleri buldun!</p>
+            <p>Objects Found: <span id="final-found"></span>/<span id="final-total"></span></p>
+            <p>Final Score: <span id="final-score"></span></p>
+            <button class="restart-btn" onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        class ResponsiveHiddenImagesGame {
+            constructor() {
+                this.objects = [
+                    { id: 'bear', image: 'images/bear.png', x: 12, y: 82, baseSize: 170 },
+                    { id: 'abaküs', image: 'images/abaküs.png', x: 71, y: 65, baseSize: 180 },
+                    { id: 'bee', image: 'images/bee.png', x: 32, y: 15, baseSize: 100 },
+                    { id: 'car', image: 'images/car.png', x: 28, y: 75, baseSize: 110 },
+                    { id: 'lamb', image: 'images/lamb.png', x: 15, y: 35, baseSize: 220 },
+                    { id: 'lion', image: 'images/lion.png', x: 80, y: 38, baseSize: 100 },
+                    { id: 'mirror', image: 'images/mirror.png', x: 45, y: 25, baseSize: 120 },
+                    { id: 'scarf', image: 'images/scarf.png', x: 90, y: 70, baseSize: 130 },
+                    { id: 'shoe', image: 'images/shoe.png', x: 48, y: 87, baseSize: 120 }
+                ];
+                this.foundObjects = new Set();
+                this.gameTime = 60;
+                this.timeLeft = this.gameTime;
+                this.score = 0;
+                this.hintUsed = false;
+                this.gameActive = true;
+                this.gameContainer = document.getElementById('game-area');
+                this.sceneBackground = document.getElementById('scene-background');
+                this.timerElement = document.getElementById('timer');
+                this.hintButton = document.getElementById('hint-btn');
+                this.init();
+            }
+
+            init() {
+                this.createObjects();
+                this.updateStats();
+                this.startTimer();
+            }
+
+            createObjects() {
+                this.objects.forEach(obj => {
+                    const element = document.createElement('div');
+                    element.className = 'hidden-object';
+                    element.id = obj.id;
+                    element.style.left = `${obj.x}%`;
+                    element.style.top = `${obj.y}%`;
+
+                    const icon = document.createElement('div');
+                    icon.className = 'object-icon';
+                    icon.style.backgroundImage = `url('${obj.image}')`;
+                    element.appendChild(icon);
+
+                    element.addEventListener('click', () => this.findObject(obj.id));
+                    this.sceneBackground.appendChild(element);
+                });
+                this.updateObjectSizes();
+            }
+
+            updateObjectSizes() {
+                const containerRect = this.gameContainer.getBoundingClientRect();
+                this.objects.forEach(obj => {
+                    const element = document.getElementById(obj.id);
+                    if (!element) return;
+                    element.style.width = `${obj.baseSize}px`;
+                    element.style.height = `${obj.baseSize}px`;
+                    element.style.marginLeft = `-${obj.baseSize / 2}px`;
+                    element.style.marginTop = `-${obj.baseSize / 2}px`;
+                });
+            }
+
+            findObject(objectId) {
+                if (this.foundObjects.has(objectId) || !this.gameActive) return;
+                this.foundObjects.add(objectId);
+                const element = document.getElementById(objectId);
+                element.classList.add('found');
+                this.score += this.hintUsed ? 50 : 100;
+                this.updateStats();
+                if (this.foundObjects.size === this.objects.length) {
+                    setTimeout(() => this.gameComplete(true), 500);
+                }
+            }
+
+            updateStats() {
+                document.getElementById('found-count').textContent = this.foundObjects.size;
+                document.getElementById('total-count').textContent = this.objects.length;
+                document.getElementById('score').textContent = this.score;
+            }
+
+            startTimer() {
+                this.updateTimerDisplay();
+                this.timerInterval = setInterval(() => {
+                    this.timeLeft--;
+                    this.updateTimerDisplay();
+                    if (this.timeLeft <= 0) {
+                        this.gameComplete(false);
+                    }
+                }, 1000);
+            }
+
+            updateTimerDisplay() {
+                const minutes = Math.floor(this.timeLeft / 60);
+                const seconds = this.timeLeft % 60;
+                this.timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            gameComplete(foundAll) {
+                this.gameActive = false;
+                clearInterval(this.timerInterval);
+
+                // Disable all objects
+                document.querySelectorAll('.hidden-object').forEach(obj => {
+                    if (!obj.classList.contains('found')) {
+                        obj.classList.add('disabled');
+                    }
+                });
+
+                // Disable hint button
+                if (this.hintButton) {
+                    this.hintButton.disabled = true;
+                }
+
+                // Update completion message
+                const titleElement = document.getElementById('completion-title');
+                const textElement = document.getElementById('completion-text');
+
+                if (foundAll) {
+                    titleElement.textContent = '🎉 Tebrikler!';
+                    textElement.textContent = 'Tüm gizli nesneleri buldunuz!';
+                } else {
+                    titleElement.textContent = '⏰ Zaman tükendi..';
+                    textElement.textContent = 'Tüm gizli nesneleri bulmayı dene!';
+                }
+
+                document.getElementById('final-found').textContent = this.foundObjects.size;
+                document.getElementById('final-total').textContent = this.objects.length;
+                document.getElementById('final-score').textContent = this.score;
+                document.getElementById('completion-message').style.display = 'block';
+            }
+
+            showHint() {
+                if (this.foundObjects.size === this.objects.length || !this.gameActive) return;
+                this.hintUsed = true;
+                const unfound = this.objects.filter(obj => !this.foundObjects.has(obj.id));
+                const random = unfound[Math.floor(Math.random() * unfound.length)];
+                const element = document.getElementById(random.id);
+                if (element) {
+                    element.style.animation = 'foundPulse 2s ease-in-out 3';
+                    setTimeout(() => element.style.animation = '', 6000);
+                }
+            }
+
+            restart() {
+                this.foundObjects.clear();
+                this.timeLeft = this.gameTime;
+                this.score = 0;
+                this.hintUsed = false;
+                this.gameActive = true;
+                if (this.timerInterval) clearInterval(this.timerInterval);
+                this.startTimer();
+                this.updateStats();
+                document.querySelectorAll('.hidden-object').forEach(obj => {
+                    obj.classList.remove('found', 'disabled');
+                });
+                this.hintButton.disabled = false;
+                document.getElementById('completion-message').style.display = 'none';
+            }
+        }
+
+        let game;
+
+        function showHint() {
+            if (game) game.showHint();
+        }
+
+        function restartGame() {
+            if (game) game.restart();
+        }
+
+        async function preloadImages(urls) {
+            const promises = urls.map(url => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = url;
+                });
+            });
+            return Promise.all(promises);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const imageUrls = [
+                'images/background.jpeg',
+                'images/bear.png',
+                'images/abaküs.png',
+                'images/bee.png',
+                'images/car.png',
+                'images/lamb.png',
+                'images/lion.png',
+                'images/mirror.png',
+                'images/scarf.png',
+                'images/shoe.png'
+            ];
+
+            await preloadImages(imageUrls);
+
+            document.getElementById('loader').style.display = 'none';
+            document.querySelector('.game-header').style.visibility = 'visible';
+            document.querySelector('.game-area').style.visibility = 'visible';
+
+            game = new ResponsiveHiddenImagesGame();
+        });
+    </script>
+</body>
+</html>
