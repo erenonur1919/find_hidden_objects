@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gizli Objeleri Bul</title>
+    <title>Gizli Nesneleri Bul</title>
     <style>
         * {
             margin: 0;
@@ -128,9 +128,9 @@
         <div class="completion-message" id="completion-message">
             <h2 id="completion-title">🎉 Tebrikler!</h2>
             <p id="completion-text">Tüm gizli nesneleri buldun!</p>
-            <p>Objects Found: <span id="final-found"></span>/<span id="final-total"></span></p>
-            <p>Final Score: <span id="final-score"></span></p>
-            <button class="restart-btn" onclick="restartGame()">Play Again</button>
+            <p>Bulunan Nesne Sayısı: <span id="final-found"></span>/<span id="final-total"></span></p>
+            <p>Skor: <span id="final-score"></span></p>
+            <button class="restart-btn" onclick="restartGame()">Tekrar Oyna</button>
         </div>
     </div>
 
@@ -258,7 +258,7 @@
                     textElement.textContent = 'Tüm gizli nesneleri buldunuz!';
                 } else {
                     titleElement.textContent = '⏰ Zaman tükendi..';
-                    textElement.textContent = 'Tüm gizli nesneleri bulmayı dene!';
+                    textElement.textContent = 'Tüm gizli nesneleri bulmayı tekrar dene!';
                 }
 
                 document.getElementById('final-found').textContent = this.foundObjects.size;
